@@ -1,24 +1,57 @@
 # Cache
 
-Redis-based caching module with decorator support and superjson serialization.
+Caching module with pluggable storage adapters, decorator support, and superjson serialization. Storage is adapter-based — Redis is the built-in adapter option.
 
 ## Setup
 
-```ts
-import { CacheModule } from 'aw-backend/cache'
+Register the module **once** in the app root with the adapter of your choice (Redis is the built-in option). Registration is global: the adapter connection is created once and shared app-wide — `LockModule`, `RateLimitModule`, and any domain service reuse the same connection instead of opening their own.
 
-CacheModule.register({
-  adapter: 'redis',
-  redis: { url: 'redis://localhost:6379' },
+```ts
+import { CacheModule } from '@turystack/nestjs-cache'
+import { ConfigModule, defineConfigSchema } from '@turystack/nestjs-config'
+import { z } from 'zod'
+
+export const configSchema = defineConfigSchema({
+  REDIS_URL: z.string(),
 })
+
+declare module '@turystack/nestjs-config' {
+  interface ConfigSchemaRegistry {
+    schema: typeof configSchema
+  }
+}
+
+@Module({
+  imports: [
+    ConfigModule.register({ schema: configSchema }),
+    CacheModule.register((config) => ({
+      adapter: 'redis',
+      redis: { url: config.get('REDIS_URL') },
+    })),
+  ],
+})
+class AppModule {}
 ```
+
+`register` also accepts a plain options object; the `(config) => options` form injects the `ConfigService` at boot.
+
+Domain services (e.g. in monorepo libs) don't register anything — they just inject `CacheService`:
+
+```ts
+@Injectable()
+class DomainService {
+  constructor(private readonly cache: CacheService) {}
+}
+```
+
+Advanced: the raw adapter client is available for injection via the exported `CACHE_ADAPTER_REDIS` token, and the active adapter via `CACHE_ADAPTER`.
 
 ## CacheService
 
 Injectable service available after module registration.
 
 ```ts
-import { CacheService } from 'aw-backend/cache'
+import { CacheService } from '@turystack/nestjs-cache'
 
 class MyService {
   constructor(private readonly cache: CacheService) {}
@@ -87,13 +120,21 @@ async deleteUser(dto: { id: string }) {
 
 ```ts
 type CacheModuleOptions = {
-  adapter: 'redis'
-  redis: { url: string }
+  adapter: 'redis' // storage adapter to use; Redis is the built-in option
+  redis: { url: string } // connection config for the 'redis' adapter
 }
 type CacheOptions = { mode?: 'NX'; ttl?: number }
 type HGetDelManyOptions = { extraKeysToDel?: string[] }
 ```
 
-## Adapter
+## Adapters
 
-The module uses `ICacheAdapter` internally. The default implementation is `RedisAdapter` backed by ioredis with SCAN-based key lookup, Lua scripts for atomic operations, and wildcard pattern deletion.
+Storage is abstracted behind the `ICacheAdapter` interface (exported, along with the `CACHE_ADAPTER` DI token). Each adapter provides the low-level key/value operations; the module and decorators are storage-agnostic.
+
+Built-in adapters:
+
+| Adapter | Backed by | Notes |
+|---|---|---|
+| `'redis'` | ioredis | SCAN-based key lookup, Lua scripts for atomic operations, wildcard pattern deletion |
+
+To add a new provider, implement `ICacheAdapter` and bind it to the `CACHE_ADAPTER` token.

@@ -10,8 +10,14 @@ permissions:
   contents: write
 
 jobs:
+  # Nothing reaches npm without the suite passing.
+  verify:
+    if: "!contains(github.event.head_commit.message, 'chore: release')"
+    uses: ./.github/workflows/ci.yml
+
   publish:
     if: "!contains(github.event.head_commit.message, 'chore: release')"
+    needs: verify
     runs-on: ubuntu-latest
 
     steps:
