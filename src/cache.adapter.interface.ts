@@ -37,6 +37,18 @@ export interface ICacheAdapter {
 		key: string,
 		options?: {
 			ttl?: number
+			/**
+			 * When to apply `ttl`.
+			 *
+			 * `'always'` (default) rewrites the expiry on every call, so the key
+			 * only disappears after `ttl` of silence.
+			 *
+			 * `'on-create'` sets it once, on the increment that creates the key,
+			 * and leaves it alone afterwards — the window is measured from the
+			 * first hit and later hits cannot push it further away. This is what
+			 * a fixed-window counter needs.
+			 */
+			expiry?: 'always' | 'on-create'
 		},
 	): Promise<number>
 

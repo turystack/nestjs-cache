@@ -119,4 +119,65 @@ describe('redis adapter · real server', () => {
 			expect(await client.ttl('unit:no-ttl')).toBe(-1)
 		})
 	})
+
+	describe('incr · expiry window', () => {
+		it("pushes the expiry away on every call under 'always'", async () => {
+			await adapter.incr('window:always', {
+				ttl: 10,
+			})
+			await new Promise((resolve) => setTimeout(resolve, 1_100))
+			await adapter.incr('window:always', {
+				ttl: 10,
+			})
+
+			// Second call reset the clock: back to the full ttl.
+			expect(await client.pttl('window:always')).toBeGreaterThan(9_000)
+		})
+
+		it("measures from the first hit under 'on-create'", async () => {
+			await adapter.incr('window:fixed', {
+				expiry: 'on-create',
+				ttl: 10,
+			})
+			await new Promise((resolve) => setTimeout(resolve, 1_100))
+			await adapter.incr('window:fixed', {
+				expiry: 'on-create',
+				ttl: 10,
+			})
+
+			// A second later the window has to be a second shorter, not renewed.
+			// This is the whole difference between a limit that eventually lets
+			// you back in and one that never does under sustained traffic.
+			const remaining = await client.pttl('window:fixed')
+
+			expect(remaining).toBeLessThan(9_100)
+			expect(remaining).toBeGreaterThan(8_000)
+		})
+
+		it("still counts up under 'on-create'", async () => {
+			const options = {
+				expiry: 'on-create',
+				ttl: 10,
+			} as const
+
+			await adapter.incr('window:count', options)
+			await adapter.incr('window:count', options)
+
+			expect(await adapter.incr('window:count', options)).toBe(3)
+		})
+
+		it("sets the expiry when the key exists without one under 'on-create'", async () => {
+			// A counter created by a call that carried no ttl must still get a
+			// window from the first call that does, or it would live forever.
+			await adapter.incr('window:adopt')
+			expect(await client.ttl('window:adopt')).toBe(-1)
+
+			await adapter.incr('window:adopt', {
+				expiry: 'on-create',
+				ttl: 10,
+			})
+
+			expect(await client.pttl('window:adopt')).toBeGreaterThan(9_000)
+		})
+	})
 })

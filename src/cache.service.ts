@@ -120,6 +120,7 @@ export class CacheService {
 		key: string,
 		options?: {
 			ttl?: number
+			expiry?: 'always' | 'on-create'
 		},
 	) {
 		return this.cacheAdapter.incr(key, options)

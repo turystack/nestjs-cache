@@ -76,7 +76,7 @@ class MyService {
 | `remember` | `remember(key: string, value: string, options?: CacheOptions): Promise<string>` | Atomic get-or-set (Lua script) |
 | `hgetdel` | `hgetdel(key: string, options?: HGetDelManyOptions): Promise<Record<string, string> \| null>` | Atomic hash get and delete |
 | `hincrby` | `hincrby(key: string, field: string, value: number): Promise<number>` | Increment hash field |
-| `incr` | `incr(key: string, options?: { ttl?: number }): Promise<number>` | Atomic increment (no superjson) |
+| `incr` | `incr(key: string, options?: { ttl?: number; expiry?: 'always' \| 'on-create' }): Promise<number>` | Atomic increment (no superjson) |
 | `decr` | `decr(key: string): Promise<number>` | Atomic decrement (no superjson) |
 
 ## Decorators
