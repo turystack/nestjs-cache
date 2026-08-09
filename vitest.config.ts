@@ -21,6 +21,10 @@ export default defineConfig({
 			},
 		},
 		include: ['**/*.test.ts'],
+		// End-to-end tests need the services from docker-compose.yml and run
+		// through vitest.e2e.config.ts. Without this they would be picked up here
+		// and make `pnpm test` require Docker.
+		exclude: ['**/node_modules/**', '**/*.e2e.test.ts'],
 		root: './src',
 		setupFiles: ['../vitest.setup.ts'],
 	},

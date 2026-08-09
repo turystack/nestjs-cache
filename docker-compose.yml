@@ -1,0 +1,28 @@
+# Valkey for the end-to-end tests of the cache adapter.
+#
+# Lives in this package, not in the workspace root: each library is its own git
+# repository, so a root-level file would ship with none of them and would be
+# invisible to this package's CI.
+#
+# Only `*.e2e.test.ts` needs it — `pnpm test` stays fast and Docker-free.
+# The port is shifted so a Redis already running locally is not shadowed.
+#
+#   pnpm services:up
+#   pnpm test:e2e
+#   pnpm services:down
+
+name: turystack-nestjs-cache
+
+services:
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: ['valkey-server', '--appendonly', 'no']
+    ports:
+      - '6380:6379'
+    # Tests connect as soon as the container is up; without a healthcheck the
+    # first one races the server's own startup.
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 2s
+      timeout: 3s
+      retries: 15

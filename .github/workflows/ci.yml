@@ -35,5 +35,18 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+      # Started through docker compose rather than a `services:` block so CI
+      # runs the very same definition a developer runs locally — one file, no
+      # drift between the two.
+      - name: Start backing services
+        run: pnpm services:up
+
+      - name: End-to-end tests
+        run: pnpm test:e2e
+
+      - name: Stop backing services
+        if: always()
+        run: pnpm services:down
+
       - name: Build
         run: pnpm build

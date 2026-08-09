@@ -26,14 +26,17 @@
 	],
 	"scripts": {
 		"build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
-		"typecheck": "tsc --noEmit",
-		"test": "vitest run",
-		"test:cov": "vitest run --coverage",
-		"lint": "biome lint ./src",
-		"format": "biome format --write ./src",
 		"check": "biome check ./src",
 		"check:fix": "biome check --write ./src",
-		"prepack": "pnpm run build"
+		"format": "biome format --write ./src",
+		"lint": "biome lint ./src",
+		"prepack": "pnpm run build",
+		"services:down": "docker compose down -v",
+		"services:up": "docker compose up -d --wait",
+		"test": "vitest run",
+		"test:cov": "vitest run --coverage",
+		"test:e2e": "vitest run --config vitest.e2e.config.ts",
+		"typecheck": "tsc --noEmit"
 	},
 	"repository": {
 		"type": "git",
